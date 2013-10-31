@@ -212,11 +212,10 @@ export class Ajax
 
 	/**
 		@constructor
-		@param {object} options
+		@param {object} [options]
 	*/
-	constructor( public options = {
-
-	}){}
+	constructor( public options = {})
+	{}
 
 
 
@@ -385,7 +384,7 @@ export class Ajax
 
 	/**
 		@method abortAll
-		@param {Any?} reason
+		@param {Any} [reason]
 	*/
 	public abortAll(reason?)
 	{
@@ -413,10 +412,10 @@ export function send(method: string, options: AjaxOptions) : AjaxRequest
 
 /**
 	exposed abortAll() method on default Ajax class instance
-
+	@param {Any} [reason]
 	@method abortAll
 */
-export function abortAll()
+export function abortAll(reason?)
 {
-	return ajax.abortAll()
+	return ajax.abortAll(reason)
 }

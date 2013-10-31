@@ -85,7 +85,7 @@ class Promise
 		Register a rejection handler. Shortcut for .then(undefined, onRejected)
 
 		@method catch
-		@param {function} onRejected
+		@param onRejected {function}
 		@return {Promise}
 	*/
 	public catch(onRejected)
@@ -103,7 +103,7 @@ class Promise
 		an additional error.
 
 		@method finally
-		@param {function} onFulfilledOrRejected handler to be called regardless of
+		@param onFulfilledOrRejected {function} handler to be called regardless of
 		  fulfillment or rejection
 		@returns {Promise}
 	*/
@@ -119,7 +119,7 @@ class Promise
 		Shortcut for .then(function() { return value; })
 
 		@method yield
-		@param  {*} value
+		@param value {*}
 		@return {Promise} a promise that:
 		- is fulfilled if value is not a promise, or
 		- if value is a promise, will fulfill with its value, or reject with its reason.
@@ -136,7 +136,7 @@ class Promise
 
 		@method tap
 		@desc
-		@param {function} onFulfilledSideEffect
+		@param onFulfilledSideEffect {function}
 		@returns {Promise}
 	*/
 	public tap(onFulfilledSideEffect)
@@ -152,14 +152,15 @@ class Promise
 		i.e. onFulfilled.apply(undefined, array).
 
 		@method spread
-		@param {function} onFulfilled function to receive spread arguments
+		@param onFulfilled {function} function to receive spread arguments
+		@param [onRejected] {function}
 		@return {Promise}
 	*/
-	public spread(onFulfilled)
+	public spread(onFulfilled, onRejected?)
 	{
 		return this
 			.then((array)=> Promise.all(array))
-			.then((array)=> onFulfilled.apply(undefined, array))
+			.then((array)=> onFulfilled.apply(undefined, array), onRejected)
 	}
 
 
@@ -405,33 +406,27 @@ class Promise
 
 		@method resolve
 		@static
-		@param  {*} value
+		@param [promiseOrValue] {*}
 		@return {Promise}
 	*/
-	static resolve(value)
+	static resolve(promiseOrValue?)
 	{
 		var p = new Promise()
-		p.resolve(value)
+		p.resolve(promiseOrValue)
 		return p
 	}
 
 
 
 	/**
-		Returns a rejected promise for the supplied promiseOrValue.  The returned
-		promise will be rejected with:
-
-		 * promiseOrValue, if it is a value, or
-		 * if promiseOrValue is a promise
-		 	* promiseOrValue's value after it is fulfilled
-		 	* promiseOrValue's reason after it is rejected
+		Returns a rejected promise for the supplied reason.
 
 		@method reject
 		@static
-		@param {*} promiseOrValue the rejected value of the returned Promise
+		@param [reason] {Any} rejected value of the returned Promise
 		@return {Promise}
 	*/
-	static reject(reason)
+	static reject(reason?)
 	{
 		var p = new Promise()
 		p.reject(reason)
@@ -465,7 +460,7 @@ class Promise
 
 		@method when
 		@static
-		@param {*} promiseOrValue
+		@param promiseOrValue {*}
 		@returns {Promise}
 	*/
 	static when(promiseOrValue)
@@ -482,7 +477,7 @@ class Promise
 
 		@method all
 		@static
-		@param {Array} promisesOrValues array of anything, may contain a mix
+		@param promisesOrValues {Array} array of anything, may contain a mix
 		  of {@link Promise}s and values
 		@returns {Promise}
 	*/
@@ -511,6 +506,7 @@ class Promise
 
 		@method join
 		@static
+		@param [promisesOrValues]* {Any}
 		@return {Promise} a promise that will fulfill when *all* the input promises
 		  have fulfilled, or will reject when *any one* of the input promises rejects.
 	*/
