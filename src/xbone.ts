@@ -14,4 +14,4 @@ import ajax = require('./ajax')
 
 export var _ = lodash
 export var Ajax = ajax
-export var P = promise
+export var Promise = promise
