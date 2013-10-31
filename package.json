@@ -29,6 +29,5 @@
   },
   "scripts": {
     "test-promise": "promises-aplus-tests test-build/promise/promises-aplus-adapter.js --reporter spec"
-  },
-  "readmeFilename": "Readme.md"
+  }
 }

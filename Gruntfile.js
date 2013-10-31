@@ -83,7 +83,7 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-browserify')
 	grunt.loadNpmTasks("grunt-ts")
 
-	// grunt.registerTask('default', ['ts:src'])
+	grunt.registerTask('default', ['ts:src'])
 
 	grunt.registerTask('test-build', [
 		'clean'
