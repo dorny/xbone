@@ -13,8 +13,6 @@ export var $doc = new $Document(document)
 */
 export class $HTMLElement
 {
-	private _eventlisteners;
-
 	/**
 		@attribute el
 		@type {HTMLElement}
@@ -218,6 +216,80 @@ export class $HTMLElement
 	}
 
 
+
+	/**
+		@method val
+		@return {String|Number}
+	*/
+	public value()
+	{
+		switch(this.el.tagName) {
+			case 'INPUT':
+				var inp = (<HTMLInputElement> this.el)
+				switch ((inp.getAttribute('type')||inp.type).toLowerCase()) {
+					case 'checkbox': return inp.checked
+					case 'number': return parseFloat(inp.value)
+					default: return inp.value
+				}
+
+			case 'SELECT':
+				var sel = (<HTMLSelectElement> this.el)
+				if (sel.multiple && sel['selectedOptions'])
+					return slice.call(sel['selectedOptions']).map((el)=> el.value)
+				else
+					return sel.options[sel.selectedIndex].value
+
+			case 'TEXTAREA':
+				return (<HTMLTextAreaElement> this.el).value
+
+			default:
+				return this.el.textContent
+		}
+	}
+
+
+	/**
+		@method setVal
+		@param value {String|Number}
+	*/
+	public setValue(value)
+	{
+		switch(this.el.tagName) {
+			case 'INPUT':
+				var inp = (<HTMLInputElement> this.el)
+				switch ((inp.getAttribute('type')||inp.type).toLowerCase()) {
+					case 'checkbox':
+						inp.checked = value ? true:false
+						return
+
+					default:
+						inp.value = value
+						return
+				}
+
+			case 'SELECT':
+				var sel = (<HTMLSelectElement> this.el)
+				  , options = sel.options
+				  , found = false
+				for(var i=0, l=options.length; i<l; i++) {
+					if (options[i].value==value) {
+						sel.selectedIndex = i
+						return
+					}
+				}
+				throw new Error('Option not found')
+
+			case 'TEXTAREA':
+				(<HTMLTextAreaElement> this.el).value = value
+
+			default:
+				this.el.textContent = value
+				return
+		}
+	}
+
+
+
 	/**
 		@method matches
 		@param selector {String}
@@ -226,6 +298,26 @@ export class $HTMLElement
 	public matches(selector) : boolean
 	{
 		return matches.call(this.el, selector)
+	}
+
+
+	/**
+		@method getPageOffset
+		@return {Object}
+	*/
+	public getPageOffset()
+	{
+		var el = this.el
+		  , x = this.el.offsetLeft
+		  , y = this.el.offsetTop
+
+		while (el.offsetParent) {
+			el = <HTMLElement> el.offsetParent
+			x += el.offsetLeft
+			y += el.offsetTop
+		}
+
+		return { pageX: x, pageY: y }
 	}
 
 
@@ -271,23 +363,16 @@ export class $HTMLElement
 		@param events {String}
 		@param selector {String}
 		@param callback {Function}
-		@param [thisArg]
 		@param [useCapture=false] {Boolean}
 		@return {$HTMLElement}
 	*/
-	public on(events: string, selector: string, callback, thisArg?, useCapture: boolean = false)
+	public on(events: string, selector: string, callback, useCapture: boolean = false)
 	{
-		this._eventlisteners || (this._eventlisteners = [])
-
 		events.split(' ').forEach((evt)=> {
-			var clb
 			if (selector)
-				clb = (e)=> { if ( matches.call(e.target, selector)) return callback.call(thisArg,e) }
-			else
-				clb = (e)=> callback.call(thisArg,e)
+				callback = (e)=> { if ( matches.call(e.target, selector)) return callback(e) }
 
-			this._eventlisteners.push({event: evt, callback: callback, listener: clb, useCapture: useCapture})
-			this.el.addEventListener(evt, clb, useCapture)
+			this.el.addEventListener(evt, callback, useCapture)
 		})
 
 		return this
@@ -298,13 +383,12 @@ export class $HTMLElement
 		@method bind
 		@param events {String}
 		@param callback {Function}
-		@param [thisArg]
 		@param [useCapture=false] {Boolean}
 		@return {$HTMLElement}
 	*/
-	public bind(events, callback, thisArg?, useCapture: boolean = false)
+	public bind(events, callback, useCapture: boolean = false)
 	{
-		return this.on(events, null, callback, thisArg, useCapture)
+		return this.on(events, null, callback, useCapture)
 	}
 
 
@@ -315,20 +399,10 @@ export class $HTMLElement
 		@param [useCapture=false] {Boolean}
 		@return
 	*/
-	public off(events, callback?, useCapture?)
+	public off(events, callback?, useCapture=false)
 	{
-		if (!this._eventlisteners)
-			return
-
 		events.split(' ').forEach((evt)=> {
-			this._eventlisteners = this._eventlisteners.filter((it)=> {
-				if (it.event===evt && (!callback || it.callback===callback) && (!useCapture || it.useCapture===useCapture)) {
-					this.el.removeEventListener(evt, it.listener, it.useCapture)
-					return false
-				}
-				else
-					return true
-			})
+			this.el.removeEventListener(evt, callback, useCapture)
 		})
 	}
 
@@ -353,7 +427,7 @@ export class $Document
 	*/
 	public create(tagName: string, attrs?:{[name: string]: any}, childs?: HTMLElement[]) : HTMLElement
 	{
-		var el = document.createElement(tagName)
+		var el = this.el.createElement(tagName)
 
 		if (attrs) {
 
@@ -399,14 +473,61 @@ export class $Document
 		return $(this.get(id))
 	}
 
+
+
+	/**
+		@method read
+		@param elements {HTMLElement[]}
+		@param [nameAttr] {String}
+		@return values {Object}
+	*/
+	public read(elements: HTMLElement[], nameAttr?: string)
+	{
+		var ret = {}
+		  , el
+		  , key
+
+		for(var i=0,l=elements.length; i<l; i++) {
+			el = elements[i]
+			key = nameAttr ? (el.name || el.getAttribute('data-name')) : el.getAttribute(nameAttr)
+			ret[key] = $(el).value()
+		}
+
+		return ret
+	}
+
+
+	/**
+		@method fill
+		@param elements {HTMLElement[]}
+		@param values {Object}
+		@param [nameAttr] {String}
+		@param [defaultValue] {String}
+		@return $
+	*/
+	public fill(elements: HTMLElement[], values: {[key:string]: any}, nameAttr?: string, defaultValue?: string)
+	{
+		var el, key, val
+
+		for(var i=0,l=elements.length; i<l; i++) {
+			el = elements[i]
+			key = nameAttr ? (el.name || el.getAttribute('data-name')) : el.getAttribute(nameAttr)
+			val = key in values ? values[key] : defaultValue
+			$(el).setValue(val)
+		}
+
+		return this
+	}
+
 	public one: (selector: string) => HTMLElement;
 	public all: (selector: string) => HTMLElement[];
 	public byTag: (tagName: string) => HTMLElement[];
 	public byClass: (className: string) => HTMLElement[];
+	public createMap: (selector: string, attrName: string) => {[key: string]: HTMLElement};
 	public $one: (selector: string) => $HTMLElement;
 	public $all: (selector: string) => $HTMLElement[];
-	public on: (events: string, selector: string, callback, thisArg?, useCapture: boolean = false) => $Document;
-	public bind: (events, callback, thisArg?, useCapture: boolean = false) => $Document;
+	public on: (events: string, selector: string, callback, useCapture: boolean = false) => $Document;
+	public bind: (events, callback, useCapture: boolean = false) => $Document;
 	public off: (events, callback?, useCapture?) => $Document;
 }
 
@@ -414,6 +535,7 @@ $Document.prototype.one = $HTMLElement.prototype.one
 $Document.prototype.all = $HTMLElement.prototype.all
 $Document.prototype.byTag = $HTMLElement.prototype.byTag
 $Document.prototype.byClass = $HTMLElement.prototype.byClass
+$Document.prototype.createMap = $HTMLElement.prototype.createMap
 $Document.prototype.$one = $HTMLElement.prototype.$one
 $Document.prototype.on = <any> $HTMLElement.prototype.on
 $Document.prototype.bind = <any> $HTMLElement.prototype.bind
