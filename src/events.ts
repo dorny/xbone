@@ -3,34 +3,8 @@
 	@submodule Events
 */
 
-
-
-import P = require('./promise')
-
-/// <amd-dependency path="./deps/lodash"/>
-declare var require;
-var _ = require('./lodash')
-
-
-
 export = Events
 
-/*
-// Interfaces
-// -------------------------------------------
-export interface IEvents
-{
-	_uid;
-	_events;
-	_listening;
-	on(event: string, callback, thisArg?) : void;
-	once(event: string, callback, thisArg?) : void;
-	off(event?: string, callback?) : void;
-	emit(event: string, ...args) : void;
-	listenTo(source, event: string, callback, thisArg?) : void;
-	stopListening(source, events?: string[]) : void;
-}
-*/
 
 
 /**
@@ -39,22 +13,10 @@ export interface IEvents
 class Events
 {
 	/**
-		@attribute _uid
-		@protected
-	*/
-	_uid;
-
-	/**
 		@attribute _events
 		@protected
 	*/
 	_events;
-
-	/**
-		@attribute _listening
-		@protected
-	*/
-	_listening;
 
 
 
@@ -62,13 +24,9 @@ class Events
 		@method on
 		@param events {String}
 		@param callback {Function}
-		@param [thisArg]
 	*/
-	public on(events: string, callback, thisArg?)
+	public on(events: string, callback)
 	{
-		if (thisArg)
-			callback = _.bind(callback,thisArg)
-
 		this._events || (this._events = {})
 
 		events.split(' ').forEach( (evt)=>{
@@ -84,18 +42,16 @@ class Events
 		@method once
 		@param events {String}
 		@param callback {Function}
-		@param [thisArg]
 	*/
-	public once(events: string, callback, thisArg?)
+	public once(events: string, callback)
 	{
 
 		var call_once = () => {
 			this.off(events, call_once)
-			callback.apply(thisArg, arguments)
+			callback.call(undefined,arguments)
 		}
 
-		this.on(events, call_once)
-		return this
+		return this.on(events, call_once)
 	}
 
 
@@ -110,8 +66,7 @@ class Events
 			return
 
 		if (arguments.length==0) {
-			this.emit('__EVENTS_OFF__', this)
-			this._events = {}
+			delete this._events
 			return
 		}
 
@@ -147,89 +102,19 @@ class Events
 		events.split(' ').forEach( (evt)=>{
 			var list = this._events[evt]
 			if (!list) return
-			for(var i=0; i<list.length; i++)
-				list[i].apply(this, args)
-		})
-
-		return this
-	}
-
-
-	/**
-		@method listenTo
-		@param source {Events}
-		@param events {String}
-		@param callback {Function}
-		@param [thisArg]
-	*/
-	public listenTo(source, events: string, callback, thisArg?)
-	{
-		if (thisArg)
-			callback = _.bind(callback,thisArg)
-
-		source.on(events, callback)
-
-		var listening = this._listening || (this._listening = {})
-		  , uid = source._uid || (source._uid = _.uniqueId('l'))
-
-		var tuple
-		if (listening[uid])
-			tuple = listening[uid]
-		else {
-			var cleaner = source.on('__EVENTS_OFF__', ()=>{delete this._listening[uid]})
-			tuple = listening[uid] = {source: source, events:{ '__EVENTS_OFF__':[cleaner] }}
-		}
-
-		events.split(' ').forEach( (evt)=>{
-			var list = tuple.events[evt] || (tuple.events[evt]=[])
-			list.push(callback)
-		})
-
-		return this
-	}
-
-
-	/**
-		@method stopListening
-		@param source {Events}
-		@param events {String}
-	*/
-	public stopListening(source?, events?: string)
-	{
-		if (!this._listening)
-			return
-
-		if (arguments.length==0) {
-			for(var uid in this._listening) {
-				var tuple = this._listening[uid]
-				for(var evt in tuple.events)
-					tuple.events[evt].forEach( (callback)=>tuple.source.off(evt, callback))
+			var i = -1, l = list.length, a1 = args[0], a2 = args[1], a3 = args[2]
+			switch (args.length) {
+				case 0: while (++i < l) list[i].call(undefined); return;
+				case 1: while (++i < l) list[i].call(undefined, a1); return;
+				case 2: while (++i < l) list[i].call(undefined, a1, a2); return;
+				case 3: while (++i < l) list[i].call(undefined, a1, a2, a3); return;
+				default: while (++i < l) list[i].apply(undefined, args);
 			}
-			return
-		}
-
-		var uid = source._uid
-		if (!this._listening[uid])
-			return
-
-		var map = this._listening[uid].events
-		if (events) {
-			events.split(' ').forEach( (evt)=>{
-				if (evt in map) {
-					map[evt].forEach( (callback)=>source.off(evt, callback))
-					delete map[evt]
-				}
-			})
-		}
-		else {
-			for(var evt in map)
-				map[evt].forEach( (callback)=>source.off(evt, callback))
-
-			delete this._listening[uid]
-		}
+		})
 
 		return this
 	}
+
 
 
 	/**
@@ -239,6 +124,6 @@ class Events
 	*/
 	static extend(dest) {
 		var proto = Events.prototype;
-		['on','once','off','emit','listenTo','stopListening'].forEach( (fn)=> { dest.prototype[fn] = proto[fn] })
+		['on','once','off','emit'].forEach( (fn)=> { dest.prototype[fn] = proto[fn] })
 	}
 }
