@@ -227,9 +227,15 @@ export class $HTMLElement
 			case 'INPUT':
 				var inp = (<HTMLInputElement> this.el)
 				switch ((inp.getAttribute('type')||inp.type).toLowerCase()) {
-					case 'checkbox': return inp.checked
-					case 'number': return parseFloat(inp.value)
-					default: return inp.value
+					case 'radio':
+					case 'checkbox':
+						return inp.checked
+
+					case 'number':
+						return parseFloat(inp.value)
+
+					default:
+						return inp.value
 				}
 
 			case 'SELECT':
@@ -260,6 +266,13 @@ export class $HTMLElement
 				switch ((inp.getAttribute('type')||inp.type).toLowerCase()) {
 					case 'checkbox':
 						inp.checked = value ? true:false
+						return
+
+					case 'radio':
+						if (typeof value === 'boolean')
+							inp.checked = (inp.value ? true : false)
+						else
+							inp.checked = (value==inp.value ? true : false)
 						return
 
 					default:
@@ -490,7 +503,13 @@ export class $Document
 		for(var i=0,l=elements.length; i<l; i++) {
 			el = elements[i]
 			key = nameAttr ? (el.name || el.getAttribute('data-name')) : el.getAttribute(nameAttr)
-			ret[key] = $(el).value()
+
+			if (el.tagName=='INPUT' && el.type=='radio') {
+				if (el.checked)
+					ret[key] = el.value
+			}
+			else
+				ret[key] = $(el).value()
 		}
 
 		return ret
@@ -500,19 +519,21 @@ export class $Document
 	/**
 		@method fill
 		@param elements {HTMLElement[]}
-		@param values {Object}
+		@param values {Object|Function}
 		@param [nameAttr] {String}
 		@param [defaultValue] {String}
 		@return $
 	*/
-	public fill(elements: HTMLElement[], values: {[key:string]: any}, nameAttr?: string, defaultValue?: string)
+	public fill(elements: HTMLElement[], values, nameAttr?: string, defaultValue?: string)
 	{
 		var el, key, val
+		  , useFun = typeof values === 'function'
+
 
 		for(var i=0,l=elements.length; i<l; i++) {
 			el = elements[i]
 			key = nameAttr ? (el.name || el.getAttribute('data-name')) : el.getAttribute(nameAttr)
-			val = key in values ? values[key] : defaultValue
+			val =  useFun ? values(key,el) : (key in values ? values[key] : defaultValue)
 			$(el).setValue(val)
 		}
 
