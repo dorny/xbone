@@ -453,6 +453,33 @@ class Promise
 	}
 
 
+	/**
+		Returns promise resolved by result of fn() after {delay} ms
+
+		@method deferCall
+		@static
+		@param fn {Function}
+		@param [delay] {Number}
+		@return {Promise}
+	*/
+	static deferCall(fn, delay=0)
+	{
+		var defer = Promise.defer()
+		setTimeout(()=> {
+			var res
+			try {
+				res = fn.call(undefined)
+			} catch (e) {
+				defer.reject(e)
+				return
+			}
+			defer.resolve(res)
+		}, delay)
+
+		return defer.promise
+	}
+
+
 
 	/**
 		If promiseOrValue is not trusted promise (instanceof Promise) it will return
