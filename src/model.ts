@@ -21,10 +21,29 @@ export = Model
 class Model extends Events {
 
 	/**
+		On model attributes change
+		@event change
+		@param this {Model}
+	*/
+
+
+
+	/**
 		Model attributes
 		@attribute attrs
 	*/
 	public attrs;
+
+
+	// for access to static properties in child class
+	public constructor;
+
+
+	/**
+		@attribute defaults
+		@static
+	*/
+	static defaults;
 
 
 	/**
@@ -35,6 +54,7 @@ class Model extends Events {
 		@private
 	*/
 	private _changed: {[key: string]: boolean};
+	private _changeEventScheduled;
 
 
 	/**
@@ -45,7 +65,8 @@ class Model extends Events {
 	constructor(attributes = {}, options?)
 	{
 		super()
-		this.attrs = attributes
+		var defaults = this.constructor.defaults
+		this.attrs = defaults ? _.merge(attributes, defaults) : attributes
 		this.init(options)
 	}
 
@@ -76,6 +97,20 @@ class Model extends Events {
 
 
 	/**
+		Shoul return unique id for current model.
+		By default return 'id' attribute.
+		Override in child classes if you need another id attribute or automatic temporary id.
+
+		@method id
+		@return {String}
+	*/
+	public id()
+	{
+		return this.attrs.id
+	}
+
+
+	/**
 		Get the current value of an attribute from the model.
 		If key match beings with '@' it's treated as computed property and this[<restOfKey>] will be returned
 
@@ -90,89 +125,88 @@ class Model extends Events {
 
 	/**
 		Set current value of an model attribute.
-		If new value is not equeal to current value and silent argument is not true, model will emit 'change' event.
+		If {replace} is "true" or new value is not (deep) equeal to current value, model will schedule emit 'change' event.
 
 		@method set
 		@param key {String|Object}
 		@param value {Any}
-		@param [silent] {Boolean}
+		@param replace {Boolean} skip deep equality check
 	*/
-	public set(key, value, silent?)
+	public set(key: string, value, replace?: boolean)
 	{
-		if ( this._set(key,value) && !silent) {
-			var changed = {key: true}
-			this.afterChange(changed)
-			this.emitChange(changed)
+		var isComputed = key[0]=='@'
+		  , oldValue = isComputed ? this[key.substr(1)] : this.attrs[key]
+
+		if ( replace || (! _.isEqueal(oldValue,value)) ) {
+			this._changed[key] = true
+			if (isComputed)
+				this[key.substr(1)] = value
+			else
+				this.attrs[key] = value
+
+			this.scheduleEmitChange()
 		}
 	}
 
 
 	/**
-		Set or replace model attributes.
-		If {replace} is true, all atributes will be marked as changed and attrs attribute of model will be replaced with new value.
+		Update model attributes with new values.
+		Calls {model.set(...)} for each attrs enumerable property.
+
+		@method update
+		@param attrs {Object}
+		@param replace {Booelan} skip deep equality check
+	*/
+	public update(attrs: {[key: string]:any}, replace?: boolean)
+	{
+		for(var key in attrs)
+			this.set(key, attrs[key], replace)
+	}
+
+
+	/**
+		Smart "update" model attributes with new values and remove those not present in given {attrs} object.
 
 		@method setAttrs
 		@param attrs {Object}
-		@param [replace] {Boolean}
-		@param [silent] {Boolean}
+		@param [replace] {Boolean} skip deep equality check
 	*/
-	public setAttrs(attrs, replace?, silent?)
+	public setAttrs(attrs)
 	{
-		var changed = {}
-		  , emit = false
-
-		if (replace) {
-			emit = true
-
-			if (this.attrs)
-				for(var key in this.attrs)
-					changed[key] = true
-
-			if (attrs)
-				for(var key in attrs)
-					changed[key] = true
-
-			this.attrs = attrs
-		} else {
-			for (var key in attrs)
-				if (this._set(key,attrs[key])) {
-					changed[key] = true
-					emit = true
-				}
+		var oldAttrs = this.attrs
+		for(var key in oldAttrs) {
+			if (!(key in attrs)) {
+				this._changed[key] = true
+				delete oldAttrs[key]
+				this.scheduleEmitChange()
+			}
 		}
 
-		if (emit && !silent) {
-			this.afterChange(changed)
-			this.emitChange(changed)
-		}
+		this.update(attrs)
 	}
+
 
 
 	/**
-		Model internal method used to set attribute.
+		Reset model attributes.
 
-		@method _set
-		@protected
-		@param key {String}
-		@param value
-		@return {Boolean} is attribute changed
+		@method reset
+		@param attrs {Object}
 	*/
-	public _set(key: string, value)
+	public reset(attrs)
 	{
-		if (key[0]=='@') {
-			key = key.substr(1)
-			if (this[key] != value) {
-			 	this[key] = value
-			 	return true
-			}
-		}
-		else {
-			if (this.attrs[key] != value) {
-				this.attrs[key] = value
-				return true
-			}
-		}
+		if (this.attrs)
+			for(var key in this.attrs)
+				this._changed[key] = true
+
+		if (attrs)
+			for(var key in attrs)
+				this._changed[key] = true
+
+		this.attrs = attrs
+		this.scheduleEmitChange()
 	}
+
 
 
 	/**
@@ -182,7 +216,7 @@ class Model extends Events {
 		@param key {String}
 		@return {Boolean}
 	*/
-	public has(key: string)
+	public has(key: string) : boolean
 	{
 		return (key in this.attrs)
 	}
@@ -222,28 +256,47 @@ class Model extends Events {
 
 
 	/**
-		Emit change event with changed parameter.
-		This method is automatically called after set() or setAttrs().
+		Emit change event imediately and clear schedule.
+		This method is automatically called after model attributes changes
+		and execution context stack contains only platform code (setTimeout(...,0)).
 
 		@method emitChange
-		@param changed {Object}
 	*/
-	public emitChange(changed: {[key: string]: boolean})
+	public emitChange()
 	{
-		this._changed = changed
-		this.emit('change', changed, this)
-		this._changed = null
+		if (!this.isChanged())
+			return;
+
+		clearTimeout(this._changeEventScheduled)
+		this._changeEventScheduled = false
+		this.beforeEmitChange(this._changed)
+		this.emit('change', this)
+		this._changed = {}
 	}
 
+
+	public scheduleEmitChange()
+	{
+		if (this._changeEventScheduled)
+			return
+
+		this._changeEventScheduled = setTimeout(()=> {
+			this._changeEventScheduled = false
+			this.emitChange()
+		},0)
+
+	}
+
+
 	/**
-		Return {true} if attribute is changed
+		Returns {true} if model attribute or model itself is changed.
 
 		@method isChanged
-		@param key {String}
+		@param [key] {String}
 	*/
-	public isChanged(key: string)
+	public isChanged(key?: string) : boolean
 	{
-		return this._changed[key]
+		return key ? this._changed[key] : (this._changeEventScheduled ? true : false)
 	}
 
 
@@ -253,11 +306,11 @@ class Model extends Events {
 		Can be used to manipulate {changed} hash, evalute computed properties and cache results or whatever you wont.
 		By default do nothing.
 
-		@method afterChange
+		@method beforeEmitChange
 		@protected
 		@param changed {Object}
 	*/
-	public afterChange(changed)
+	public beforeEmitChange(changed)
 	{
 		// Override me
 	}
@@ -290,4 +343,28 @@ class Model extends Events {
 			})
 		})
 	}
+
+
+	static flatten(attributes)
+	{
+		return _flatten(attributes, '', {})
+	}
+}
+
+
+
+function _flatten(attrs, prefix, acc)
+{
+	var val
+
+	for(var key in attrs) {
+		val = attrs[key]
+		if (val && (typeof val==='object')) {
+			_flatten(val, (prefix+key+'.'), acc)
+		}
+		else
+			acc[prefix+key] = val
+	}
+
+	return acc
 }
