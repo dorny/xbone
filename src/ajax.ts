@@ -10,6 +10,10 @@ declare var require;
 var _ = require('./lodash')
 
 
+var ArrayBuffer = window['ArrayBuffer']
+var Blob = window['Blob']
+var FormData = window['FormData']
+
 
 var dataTypes = [
 	'',
@@ -212,7 +216,7 @@ export class Ajax
 
 	/**
 		@constructor
-		@param {object} [options]
+		@param [options] {object}
 	*/
 	constructor( public options = {})
 	{}
@@ -222,8 +226,8 @@ export class Ajax
 
 	/**
 		@method onsuccess
-		@param XMLHttpRequest xhr
-		@param {AjaxOptions} options
+		@param xhr {XMLHttpRequest}
+		@param options {AjaxOptions}
 	*/
 	public onsuccess(xhr, options: AjaxOptions)
 	{
@@ -266,11 +270,67 @@ export class Ajax
 	/**
 		@method onerror
 		@param XMLHttpRequest xhr
-		@param {AjaxOptions} options
+		@param options {AjaxOptions}
 	*/
 	public onerror(xhr,options)
 	{
 		return xhr
+	}
+
+
+
+	/**
+		Shortcut for Ajax.send('GET', options)
+
+		@method get
+		@param options {AjaxOptions}
+
+	*/
+	public get(options: AjaxOptions)
+	{
+		return this.send('GET', options)
+	}
+
+
+
+	/**
+		Shortcut for Ajax.send('POST', options)
+
+		@method post
+		@param options {AjaxOptions}
+
+	*/
+	public post(options: AjaxOptions)
+	{
+		return this.send('POST', options)
+	}
+
+
+
+	/**
+		Shortcut for Ajax.send('PUT', options)
+
+		@method put
+		@param options {AjaxOptions}
+
+	*/
+	public put(options: AjaxOptions)
+	{
+		return this.send('PUT', options)
+	}
+
+
+
+	/**
+		Shortcut for Ajax.send('DELETE', options)
+
+		@method delete
+		@param options {AjaxOptions}
+
+	*/
+	public delete(options: AjaxOptions)
+	{
+		return this.send('DELETE', options)
 	}
 
 
@@ -283,8 +343,10 @@ export class Ajax
 	*/
 	public send(method: string, options: AjaxOptions) : AjaxRequest
 	{
+		method = method.toUpperCase()
+
 		var opts = _.merge({}, this.options, options)
-		  , data = opts.data
+		  , data = this.processRequestData(method, opts.data, opts)
 		  , headers = opts.headers
 
 		var xhr = new XMLHttpRequest()
@@ -306,44 +368,22 @@ export class Ajax
 			}
 		}
 
-		xhr.open( method, opts.url,true, opts.user, opts.password)
+
+		xhr.open( method, opts.url, true, opts.user, opts.password)
 
 
 		if (opts.overrideMimeType) {
-			var mime = typeof opts.overrideMimeType==='boolean' ? mimeTypes[opts.responseType] : opts.responseType
+			var mime
+			if (opts.overrideMimeType===true)
+				mime = mimeTypes[opts.responseType] || opts.responseType
+			else
+				mime = opts.overrideMimeType
+
 			xhr.overrideMimeType(mime)
 		}
 
 		if (opts.responseType && isDataTypeNativeSupported[opts.responseType])
 			xhr.responseType = opts.responseType
-
-
-		if (data && (typeof data == 'object') && data!==null) {
-			if (data instanceof Document) {
-				if (!isDataTypeNativeSupported['document']) {
-					var serializer = new XMLSerializer()
-					data = serializer.serializeToString(data)
-					opts.contentType || (opts.contentType = 'xml')
-				}
-			}
-			else if (Object.getPrototypeOf(data) === Object.prototype) {
-				if (!isDataTypeNativeSupported['json']) {
-					data = JSON.stringify(opts.data)
-					opts.contentType || (opts.contentType = 'json')
-				}
-			}
-			else if (window['ArrayBuffer'] && (data instanceof window['ArrayBuffer'])) {
-				if (!isDataTypeNativeSupported['arraybuffer'])
-					throw new TypeError('Unsuported data type')
-			}
-			else if (window['Blob'] && (data instanceof window['Blob'])) {
-				if (!isDataTypeNativeSupported['blob'])
-					throw new TypeError('Unsuported data type')
-			}
-			else
-				throw new TypeError('Unsuported data type')
-		}
-
 
 		if (opts.contentType)
 			xhr.setRequestHeader('Content-Type', mimeTypes[opts.contentType] || opts.contentType)
@@ -392,30 +432,74 @@ export class Ajax
 			this.requests[key].abort(reason||'abort')
 	}
 
+
+
+	private processRequestData(method, data, opts)
+	{
+		if (data && (typeof data == 'object') && data!==null) {
+			if (method=='GET') {
+				if (Object.getPrototypeOf(data) === Object.prototype) {
+					var url = opts.url
+					  , qsa = this.serializeQueryData(data)
+
+					opts.url = url + (url.indexOf('?')==-1 ? '?':'&')+qsa
+					return null
+				}
+				else
+					throw new TypeError('Unsuported data type')
+			}
+			else {
+				if (data instanceof Document) {
+					if (!isDataTypeNativeSupported['document']) {
+						opts.contentType || (opts.contentType = 'xml')
+						var serializer = new XMLSerializer()
+						return serializer.serializeToString(data)
+					}
+				}
+				else if (Object.getPrototypeOf(data) === Object.prototype) {
+					if (!isDataTypeNativeSupported['json']) {
+						opts.contentType || (opts.contentType = 'json')
+						return JSON.stringify(opts.data)
+					}
+				}
+				else if (FormData && data instanceof FormData) {
+					return data
+				}
+				else if (ArrayBuffer && (data instanceof ArrayBuffer)) {
+					if (!isDataTypeNativeSupported['arraybuffer'])
+						throw new TypeError('Unsuported data type')
+					return data
+				}
+				else if (Blob && (data instanceof Blob)) {
+					if (!isDataTypeNativeSupported['blob'])
+						throw new TypeError('Unsuported data type')
+					return data
+				}
+				else
+					throw new TypeError('Unsuported data type')
+			}
+		}
+		else
+			return data
+	}
+
+
+	private serializeQueryData(data)
+	{
+		var params = []
+		for(var key in data) {
+			var val = data[key]
+			if (Array.isArray(val))
+				params.push( encodeURIComponent(key)+'[]='+val.map(encodeURIComponent).join(','))
+			else
+				params.push( encodeURIComponent(key)+'='+encodeURIComponent(val))
+		}
+
+		return params.join('&')
+	}
+
 }
 
-var ajax = new Ajax()
 
 
-/**
-	exposed send() method on default Ajax class instance
-
-	@method send
-	@param {string} method
-	@param {AjaxOptions} options
-*/
-export function send(method: string, options: AjaxOptions) : AjaxRequest
-{
-	return ajax.send(method, options)
-}
-
-
-/**
-	exposed abortAll() method on default Ajax class instance
-	@param {Any} [reason]
-	@method abortAll
-*/
-export function abortAll(reason?)
-{
-	return ajax.abortAll(reason)
-}
+export var ajax = new Ajax()
