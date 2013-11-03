@@ -23,7 +23,7 @@ class Collection<T extends Model> extends Events
 		@attribute models
 		@type {Models[]}
 	*/
-	public models: T[];
+	public models: T[] = [];
 
 
 	/**
@@ -32,7 +32,7 @@ class Collection<T extends Model> extends Events
 		@attribute _models
 		@protected
 	*/
-	public _models: {[key: string]: T};
+	public _models: {[key: string]: T} = {};
 
 
 	/**
@@ -44,7 +44,14 @@ class Collection<T extends Model> extends Events
 	public comparator;
 
 
+	/**
+		What to do when model emits change.
+		By default it emits change event on collection with "model" and "collection" as parameters.
 
+		@attribute onModelChanged
+		@type {Function}
+
+	*/
 	public onModelChanged = (model)=> { this.emit('change', model, this) }
 
 
