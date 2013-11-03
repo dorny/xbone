@@ -78,7 +78,7 @@ class Model extends Events {
 		@type {Object}
 		@private
 	*/
-	private _changed: {[key: string]: boolean};
+	private _changed: {[key: string]: boolean} = {};
 	private _changeEventScheduled;
 
 
