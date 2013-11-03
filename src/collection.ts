@@ -8,6 +8,8 @@ import Events = require('./events')
 import Model = require('./model')
 
 
+export = Collection
+
 /**
 	@class Collection
 	@extends Model

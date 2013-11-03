@@ -12,7 +12,7 @@ var $ = dom.$
   , $doc = dom.$doc
 
 
-
+export = View
 /**
 	@class View
 	@extends Events
