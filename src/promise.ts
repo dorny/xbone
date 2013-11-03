@@ -317,12 +317,14 @@ class Promise
 				result = this.onFulfilled.call(undefined,value)
 				if (result===this) throw new TypeError('Cyclic promise')
 			} catch (e) {
-
 				this.state = PromiseState.REJECTED
 				this.value = e
-				for(var i=0; i<l; i++)
-					promises[i]._reject(e)
-
+				if (promises.length)
+					for(var i=0; i<l; i++)
+						promises[i]._reject(e)
+				else
+					if (Promise.onerror)
+						Promise.onerror(e)
 				return
 			}
 		}
@@ -376,8 +378,12 @@ class Promise
 			} catch (e) {
 				this.state = PromiseState.REJECTED
 				this.value = e
-				for(var i=0; i<l; i++)
-					promises[i]._reject(e)
+				if (promises.length)
+					for(var i=0; i<l; i++)
+						promises[i]._reject(e)
+				else
+					if (Promise.onerror)
+						Promise.onerror(reason)
 			}
 
 			this.state = PromiseState.FULFILLED
@@ -388,11 +394,12 @@ class Promise
 		else {
 			this.state = PromiseState.REJECTED
 			this.value = reason
-			for(var i=0; i<l; i++)
-				promises[i]._reject(reason)
-
-			if (promises.length===0 && this.onRejected===undefined && Promise.onerror)
-				Promise.onerror(reason)
+			if (promises.length)
+				for(var i=0; i<l; i++)
+					promises[i]._reject(reason)
+			else
+				if (this.onRejected===undefined && Promise.onerror)
+					Promise.onerror(reason)
 		}
 	}
 
