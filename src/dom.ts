@@ -76,15 +76,19 @@ export class $HTMLElement
 		@param selector {String}
 		@return {HTMLElement}
 	*/
-	public closest(selector: string) : HTMLElement
+	public closest(selector: string, maxParent?: Node) : HTMLElement
 	{
 		var el = this.el
+		maxParent = maxParent.parentNode
 
 		do {
-			el = el.parentElement
-		} while(el && matches.call(el, selector))
+			if (matches.call(el, selector))
+				return el
 
-		return el && matches.call(el, selector) ? el : null
+			el = el.parentElement
+		} while(el && el!=maxParent)
+
+		return null
 	}
 
 
@@ -383,7 +387,11 @@ export class $HTMLElement
 	{
 		events.split(' ').forEach((evt)=> {
 			if (selector)
-				callback = (e)=> { if ( matches.call(e.target, selector)) return callback(e) }
+				callback = (e)=> {
+					var match = $(e.target).closest(selector)
+					if (match)
+						return callback(e, match)
+				}
 
 			this.el.addEventListener(evt, callback, useCapture)
 		})
