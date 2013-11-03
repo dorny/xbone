@@ -21,8 +21,17 @@ export = Model
 class Model extends Events {
 
 	/**
-		On model attributes change
+		Emits when model attributes is changed.
 		@event change
+		@param this {Model}
+	*/
+
+
+	/**
+		Emit when models id is changed.
+		@event change:id
+		@param oldId {String}
+		@param newId {String}
 		@param this {Model}
 	*/
 
@@ -35,13 +44,32 @@ class Model extends Events {
 	public attrs;
 
 
+	/**
+		Model identifier - must be unique and must not change once model is in collection.
+		It's automatically managed by Model class and uses "Model.idAttribute" property.
+		When "idAttribute" is not present in model, client side unique identifier is generated instead.
+		@attribute id
+		@type {String}
+	*/
+	public id: string;
+
+
 	// for access to static properties in child class
 	public constructor;
+
+	/**
+		@attribute idAttribute
+		@static
+		@type {String}
+		@default "id"
+	*/
+	static idAttribute = 'id';
 
 
 	/**
 		@attribute defaults
 		@static
+		@type {Object}
 	*/
 	static defaults;
 
@@ -66,6 +94,7 @@ class Model extends Events {
 		super()
 		var defaults = this.constructor.defaults
 		this.attrs = defaults ? _.merge(attributes, defaults) : attributes
+		this.id = this.get(this.constructor.idAttribute) || _.uniqueId('cid')
 	}
 
 
@@ -78,20 +107,6 @@ class Model extends Events {
 	public data()
 	{
 		return _.cloneDeep(this.attrs)
-	}
-
-
-	/**
-		Shoul return unique id for current model.
-		By default return 'id' attribute.
-		Override in child classes if you need another id attribute or automatic temporary id.
-
-		@method id
-		@return {String}
-	*/
-	public id()
-	{
-		return this.attrs.id
 	}
 
 
@@ -170,6 +185,22 @@ class Model extends Events {
 		this.update(attrs)
 	}
 
+
+	/**
+		Adapt "model" state.
+		By default it will set attirbutes via setAttrs and update model.id
+		@method setModel
+		@param model {Model}
+	*/
+	public setModel(model: Model)
+	{
+		this.setAttrs(model.attrs)
+		if (!this._changed[this.constructor.idAttribute] && this.id != model.id) {
+			var old = this.id
+			this.id = model.id
+			this.emit('change:id', old, this.id, this)
+		}
+	}
 
 
 	/**
@@ -251,6 +282,13 @@ class Model extends Events {
 	{
 		if (!this.isChanged())
 			return;
+
+		if (this._changed[this.constructor.idAttribute]) {
+			var old = this.id
+			this.id = this.get('id')
+			if (old != this.id)
+				this.emit('change:id', old, this.id, this)
+		}
 
 		clearTimeout(this._changeEventScheduled)
 		this._changeEventScheduled = false

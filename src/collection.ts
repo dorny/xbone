@@ -56,6 +56,19 @@ class Collection<T extends Model> extends Events
 
 
 	/**
+		What to do when model id is changed
+		By default it remaps internat hash to new id.
+		It shouldn't be needed to override this behaviour.
+	*/
+	public onModelIdChanged = (oldId, newId, model)=> {
+		delete this._models[oldId]
+		this._models[newId] = model
+		if (model.constructor.idAttribute==this.comparator)
+			this.sort()
+	}
+
+
+	/**
 		Returns model with given id
 
 		@method get
@@ -96,7 +109,7 @@ class Collection<T extends Model> extends Events
 	*/
 	public add(model: T)
 	{
-		var id = model.id()
+		var id = model.id
 		  , pos
 
 		if (this._models[id])
@@ -119,14 +132,14 @@ class Collection<T extends Model> extends Events
 
 
 	/**
-		Shortcut for {removeById(model.id())}
+		Shortcut for {removeById(model.id)}
 
 		@method remove
 		@param model {Model}
 	*/
 	public remove(model: T)
 	{
-		return this.removeById(model.id())
+		return this.removeById(model.id)
 	}
 
 
@@ -166,7 +179,7 @@ class Collection<T extends Model> extends Events
 
 		this._models = {}
 		for(var i=0; i<models.length; i++)
-			this._models[models[i].id()] = models[i]
+			this._models[models[i].id] = models[i]
 
 		this.models = this.comparator ? _.sortBy(models, this.comparator) : models
 
@@ -190,21 +203,66 @@ class Collection<T extends Model> extends Events
 	*/
 	public setModels(models: T[])
 	{
-		var newHash = _.indexBy(models, (it)=> it.id())
+		var newHash = _.indexBy(models, (it)=> it.id)
 		  , oldHash = this._models
 
-		for(var key in newHash)
-			if (!(key in oldHash))
+		for(var key in oldHash)
+			if (!(key in newHash))
 				this.removeById(key)
 
 		models.forEach((model)=> {
-			var current = this._models[model.id()]
+			var current = this._models[model.id]
 			if (current) {
-				current.setAttrs(model.attrs)
+				current.setModel(model)
 				current.emitChange()
 			}
 			else
 				this.add(model)
+		})
+	}
+
+
+	/**
+		Update collection from raw data. By default it will:
+
+		 * create new models vith new ModelClass(attributes)
+		 * update models with setAttrs(attributes)
+		 * remove old models with model.free()
+
+		You can change this behaviour with optional "options.create", "option.update", "option.remove" callbacks.
+
+		@method setModelsFromJSON
+		@param data {Object[]}
+		@param ModelClass
+		@param [options] {Object}
+	*/
+	public setModelsFromJSON(data: Object[], ModelClass: {new (attrs): T; idAttribute: string}, options: {create?; update?; remove?} = {})
+	{
+		var idAttribute = ModelClass.idAttribute
+		  , create = options.create || (attrs)=> new ModelClass(attrs)
+		  , update = options.update || (model,attrs)=> model.setAttrs(attrs)
+		  , remove = options.remove || (model)=> model.free()
+
+		var newHash = _.indexBy(data, (it)=> it[idAttribute])
+		  , oldHash = this._models
+
+		for(var key in oldHash) {
+			if (!(key in newHash)) {
+				var model = oldHash[key]
+				this.removeById(key)
+				remove(model)
+			}
+		}
+
+		data.forEach((attrs)=> {
+			var current = this._models[attrs[idAttribute]]
+			if (current) {
+				update(current, attrs)
+				current.emitChange()
+			}
+			else {
+				this.add(create(attrs))
+			}
 		})
 	}
 
@@ -233,6 +291,7 @@ class Collection<T extends Model> extends Events
 	public processNewItem(model: T)
 	{
 		model.onChange(this.onModelChanged)
+		model.on('change:id', this.onModelIdChanged)
 	}
 
 
@@ -246,6 +305,7 @@ class Collection<T extends Model> extends Events
 	public processRemovedItem(model: T)
 	{
 		model.off('change', this.onModelChanged)
+		model.off('change:id', this.onModelIdChanged)
 	}
 
 
