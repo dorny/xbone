@@ -60,27 +60,12 @@ class Model extends Events {
 	/**
 		@constructor
 		@param [attattributesr={}] initial model attributes
-		@param [options] {Any} options will be passed to init() method
 	*/
-	constructor(attributes = {}, options?)
+	constructor(attributes = {})
 	{
 		super()
 		var defaults = this.constructor.defaults
 		this.attrs = defaults ? _.merge(attributes, defaults) : attributes
-		this.init(options)
-	}
-
-
-	/**
-		Model initialization method.
-
-		@method init
-		@protected
-		@param options {Any}
-	*/
-	public init(options)
-	{
-
 	}
 
 
