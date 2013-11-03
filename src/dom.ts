@@ -3,9 +3,6 @@
 	@submodule DOM
 */
 
-export var $ = (el)=> new $HTMLElement(el)
-export var $doc = new $Document(document)
-
 
 
 /**
@@ -24,7 +21,10 @@ export class $HTMLElement
 	*/
 
 	constructor (public el: HTMLElement)
-	{}
+	{
+		if (!el)
+			throw new TypeError('$HTMLElement: "el" cannot be null or undefined')
+	}
 
 
 	/**
@@ -79,7 +79,7 @@ export class $HTMLElement
 	public closest(selector: string, maxParent?: Node) : HTMLElement
 	{
 		var el = this.el
-		maxParent = maxParent.parentNode
+		maxParent && (maxParent = maxParent.parentNode)
 
 		do {
 			if (matches.call(el, selector))
@@ -378,25 +378,29 @@ export class $HTMLElement
 	/**
 		@method on
 		@param events {String}
-		@param selector {String}
+		@param selector {String|Null}
 		@param callback {Function}
 		@param [useCapture=false] {Boolean}
-		@return {$HTMLElement}
+		@return {Function}
 	*/
 	public on(events: string, selector: string, callback, useCapture: boolean = false)
 	{
-		events.split(' ').forEach((evt)=> {
-			if (selector)
-				callback = (e)=> {
-					var match = $(e.target).closest(selector)
-					if (match)
-						return callback(e, match)
-				}
+		var bindCallback
+		if (selector) {
+			bindCallback = (e)=> {
+				var match = $(e.target).closest(selector)
+				if (match)
+					return callback(e, match)
+			}
+		}
+		else
+			bindCallback = callback
 
-			this.el.addEventListener(evt, callback, useCapture)
+		events.split(' ').forEach((evt)=> {
+			this.el.addEventListener(evt, bindCallback, useCapture)
 		})
 
-		return this
+		return bindCallback
 	}
 
 
@@ -420,7 +424,7 @@ export class $HTMLElement
 		@param [useCapture=false] {Boolean}
 		@return
 	*/
-	public off(events, callback?, useCapture=false)
+	public off(events, callback, useCapture=false)
 	{
 		events.split(' ').forEach((evt)=> {
 			this.el.removeEventListener(evt, callback, useCapture)
@@ -510,7 +514,7 @@ export class $Document
 
 		for(var i=0,l=elements.length; i<l; i++) {
 			el = elements[i]
-			key = nameAttr ? (el.name || el.getAttribute('data-name')) : el.getAttribute(nameAttr)
+			key = nameAttr ? el.getAttribute(nameAttr) : (el.name || el.getAttribute('data-name'))
 
 			if (el.tagName=='INPUT' && el.type=='radio') {
 				if (el.checked)
@@ -540,7 +544,7 @@ export class $Document
 
 		for(var i=0,l=elements.length; i<l; i++) {
 			el = elements[i]
-			key = nameAttr ? (el.name || el.getAttribute('data-name')) : el.getAttribute(nameAttr)
+			key = nameAttr ? el.getAttribute(nameAttr) : (el.name || el.getAttribute('data-name'))
 			val =  useFun ? values(key,el) : (key in values ? values[key] : defaultValue)
 			$(el).setValue(val)
 		}
@@ -572,7 +576,14 @@ $Document.prototype.off = <any> $HTMLElement.prototype.off
 
 
 
+// Shortcuts
+export var $ = (el)=> new $HTMLElement(el)
+export var $doc = new $Document(document)
 
+
+
+// Internals
+// -------------------------------
 var slice = Array.prototype.slice
 
 
