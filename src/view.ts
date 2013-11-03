@@ -41,6 +41,11 @@ class View extends Events
 			parent.registerChild(this)
 	}
 
+	public init()
+	{
+		this.initView()
+		return this
+	}
 
 	public initView()
 	{

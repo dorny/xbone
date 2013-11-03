@@ -4,10 +4,7 @@
 */
 
 import P = require('./promise')
-
-/// <amd-dependency path="./deps/lodash"/>
-declare var require;
-var _ = require('./lodash')
+import _ = require('./lodash')
 
 
 var ArrayBuffer = window['ArrayBuffer']

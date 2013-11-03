@@ -3,10 +3,7 @@
 	@submodule Collection
 */
 
-/// <amd-dependency path="./deps/lodash"/>
-declare var require;
-var _ = require('./lodash')
-
+import _ = require('./lodash')
 import Events = require('./events')
 import Model = require('./model')
 

@@ -3,10 +3,7 @@
 	@submodule Model
 */
 
-/// <amd-dependency path="./deps/lodash"/>
-declare var require;
-var _ = require('./lodash')
-
+import _ = require('./lodash')
 import Events = require('./events')
 
 
@@ -137,7 +134,7 @@ class Model extends Events {
 		var isComputed = key[0]=='@'
 		  , oldValue = isComputed ? this[key.substr(1)] : this.attrs[key]
 
-		if ( replace || (! _.isEqueal(oldValue,value)) ) {
+		if ( replace || (! _.isEqual(oldValue,value)) ) {
 			this._changed[key] = true
 			if (isComputed)
 				this[key.substr(1)] = value
