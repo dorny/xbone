@@ -63,12 +63,6 @@ export var mimeTypes = {
 export interface AjaxOptions
 {
 	/**
-		@property url
-		@type {String}
-	*/
-	url: string;
-
-	/**
 		@property timeout
 		@type {Number}
 		@optional
@@ -280,12 +274,13 @@ export class Ajax
 		Shortcut for Ajax.send('GET', options)
 
 		@method get
-		@param options {AjaxOptions}
+		@param url {String}
+		@param [options] {AjaxOptions}
 
 	*/
-	public get(options: AjaxOptions)
+	public get(url: string, options?: AjaxOptions)
 	{
-		return this.send('GET', options)
+		return this.send('GET', url, options)
 	}
 
 
@@ -294,12 +289,13 @@ export class Ajax
 		Shortcut for Ajax.send('POST', options)
 
 		@method post
-		@param options {AjaxOptions}
+		@param url {String}
+		@param [options] {AjaxOptions}
 
 	*/
-	public post(options: AjaxOptions)
+	public post(url: string, options?: AjaxOptions)
 	{
-		return this.send('POST', options)
+		return this.send('POST', url, options)
 	}
 
 
@@ -308,12 +304,13 @@ export class Ajax
 		Shortcut for Ajax.send('PUT', options)
 
 		@method put
-		@param options {AjaxOptions}
+		@param url {String}
+		@param [options] {AjaxOptions}
 
 	*/
-	public put(options: AjaxOptions)
+	public put(url: string, options?: AjaxOptions)
 	{
-		return this.send('PUT', options)
+		return this.send('PUT', url, options)
 	}
 
 
@@ -322,23 +319,25 @@ export class Ajax
 		Shortcut for Ajax.send('DELETE', options)
 
 		@method delete
-		@param options {AjaxOptions}
+		@param url {String}
+		@param [options] {AjaxOptions}
 
 	*/
-	public delete(options: AjaxOptions)
+	public delete(url: string, options?: AjaxOptions)
 	{
-		return this.send('DELETE', options)
+		return this.send('DELETE', url, options)
 	}
 
 
 
 	/**
 		@method send
-		@param {string} method
-		@param {AjaxOptions} options
+		@param method {string}
+		@param url {String}
+		@param [options] {AjaxOptions}
 		@return {Promise}
 	*/
-	public send(method: string, options: AjaxOptions) : AjaxRequest
+	public send(method: string, url: string, options: AjaxOptions = {}) : AjaxRequest
 	{
 		method = method.toUpperCase()
 
@@ -366,7 +365,7 @@ export class Ajax
 		}
 
 
-		xhr.open( method, opts.url, true, opts.user, opts.password)
+		xhr.open( method, url, true, opts.user, opts.password)
 
 
 		if (opts.overrideMimeType) {
