@@ -405,6 +405,24 @@ export class $HTMLElement
 
 
 	/**
+		@method once
+		@param events {String}
+		@param callback {Function}
+		@param [useCapture=false] {Boolean}
+		@return {Function}
+	*/
+	public once(events: string, selector: string, callback, useCapture: boolean = false)
+	{
+		var clb = this.on(events, selector, ()=> {
+			this.off(events, clb)
+			return callback.apply(undefined, arguments)
+		}, useCapture)
+
+		return clb
+	}
+
+
+	/**
 		@method bind
 		@param events {String}
 		@param callback {Function}
@@ -560,6 +578,7 @@ export class $Document
 	public $one: (selector: string) => $HTMLElement;
 	public $all: (selector: string) => $HTMLElement[];
 	public on: (events: string, selector: string, callback, useCapture: boolean = false) => $Document;
+	public once: (events: string, selector: string, callback, useCapture: boolean = false) => $Document;
 	public bind: (events, callback, useCapture: boolean = false) => $Document;
 	public off: (events, callback?, useCapture?) => $Document;
 }
@@ -571,6 +590,7 @@ $Document.prototype.byClass = $HTMLElement.prototype.byClass
 $Document.prototype.createMap = $HTMLElement.prototype.createMap
 $Document.prototype.$one = $HTMLElement.prototype.$one
 $Document.prototype.on = <any> $HTMLElement.prototype.on
+$Document.prototype.once = <any> $HTMLElement.prototype.once
 $Document.prototype.bind = <any> $HTMLElement.prototype.bind
 $Document.prototype.off = <any> $HTMLElement.prototype.off
 
