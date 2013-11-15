@@ -319,22 +319,22 @@ export class $HTMLElement
 
 
 	/**
-		@method getPageOffset
+		@method offset
+		@param [offsetParent] {HTMLElement}
 		@return {Object}
 	*/
-	public getPageOffset()
+	public offset(offsetParent?)
 	{
 		var el = this.el
-		  , x = this.el.offsetLeft
-		  , y = this.el.offsetTop
+		  , x=0, y=0
 
-		while (el.offsetParent) {
-			el = <HTMLElement> el.offsetParent
-			x += el.offsetLeft
-			y += el.offsetTop
-		}
+		 do {
+		 	x += el.offsetLeft
+		 	y += el.offsetTop
+		 	el = <HTMLElement> el.offsetParent
+		 } while( el && el!=offsetParent)
 
-		return { pageX: x, pageY: y }
+		return { left: x, top: y }
 	}
 
 
@@ -524,7 +524,7 @@ export class $Document
 		@param [nameAttr] {String}
 		@return values {Object}
 	*/
-	public read(elements: HTMLElement[], nameAttr?: string)
+	public read(elements, nameAttr?: string)
 	{
 		var ret = {}
 		  , el
@@ -532,6 +532,10 @@ export class $Document
 
 		for(var i=0,l=elements.length; i<l; i++) {
 			el = elements[i]
+
+			if (el.tagName=='BUTTON')
+				continue
+
 			key = nameAttr ? el.getAttribute(nameAttr) : (el.name || el.getAttribute('data-name'))
 
 			if (el.tagName=='INPUT' && el.type=='radio') {
@@ -548,13 +552,13 @@ export class $Document
 
 	/**
 		@method fill
-		@param elements {HTMLElement[]}
+		@param elements {HTMLElement[] | HTMLCollection}
 		@param values {Object|Function}
 		@param [nameAttr] {String}
 		@param [defaultValue] {String}
 		@return $
 	*/
-	public fill(elements: HTMLElement[], values, nameAttr?: string, defaultValue?: string)
+	public fill(elements, values, nameAttr?: string, defaultValue?: string)
 	{
 		var el, key, val
 		  , useFun = typeof values === 'function'
@@ -562,6 +566,10 @@ export class $Document
 
 		for(var i=0,l=elements.length; i<l; i++) {
 			el = elements[i]
+
+			if (el.tagName=='BUTTON')
+				continue
+
 			key = nameAttr ? el.getAttribute(nameAttr) : (el.name || el.getAttribute('data-name'))
 			val =  useFun ? values(key,el) : (key in values ? values[key] : defaultValue)
 			$(el).setValue(val)
