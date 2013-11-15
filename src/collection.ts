@@ -126,7 +126,8 @@ class Collection<T extends Model> extends Events
 		this._models[id] = model
 
 		this.processNewItem(model)
-		this.emit('add', model, pos, this)
+		setTimeout(()=> this.emit('add', model, pos, this),0)
+
 	}
 
 
@@ -158,7 +159,7 @@ class Collection<T extends Model> extends Events
 			this.models.splice(pos,1)
 
 			this.processRemovedItem(model)
-			this.emit('remove', model, pos, this)
+			setTimeout(()=> this.emit('remove', model, pos, this),0)
 		}
 		else
 			throw new Error('Model not found')
@@ -184,7 +185,7 @@ class Collection<T extends Model> extends Events
 
 		oldModels.forEach(this.processRemovedItem, this)
 		this.models.forEach(this.processNewItem, this)
-		this.emit('reset', models, this)
+		setTimeout(()=> this.emit('reset', models, this),0)
 	}
 
 
@@ -211,10 +212,8 @@ class Collection<T extends Model> extends Events
 
 		models.forEach((model)=> {
 			var current = this._models[model.id]
-			if (current) {
+			if (current)
 				current.setModel(model)
-				current.emitChange()
-			}
 			else
 				this.add(model)
 		})
@@ -255,13 +254,10 @@ class Collection<T extends Model> extends Events
 
 		data.forEach((attrs)=> {
 			var current = this._models[attrs[idAttribute]]
-			if (current) {
+			if (current)
 				update(current, attrs)
-				current.emitChange()
-			}
-			else {
+			else
 				this.add(create(attrs))
-			}
 		})
 	}
 
@@ -276,7 +272,7 @@ class Collection<T extends Model> extends Events
 		else
 			this.models.sort()
 
-		this.emit('sort', this)
+		setTimeout(()=> this.emit('sort', this),0)
 	}
 
 
