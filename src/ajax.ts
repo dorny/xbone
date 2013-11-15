@@ -186,7 +186,13 @@ export interface AjaxResponse {
 		@attribute data
 		@type {Any}
 	*/
-	data;
+	data?;
+
+	/**
+		@attribute error
+		@type {Any}
+	*/
+	error?;
 
 	/**
 		@attribute xhr
@@ -271,7 +277,7 @@ export class Ajax
 			}
 		}
 
-		return {
+		return <AjaxResponse> {
 			status: xhr.status,
 			data: data,
 			xhr: xhr,
@@ -289,7 +295,7 @@ export class Ajax
 	*/
 	public onerror(xhr:XMLHttpRequest, options: AjaxOptions, error)
 	{
-		return {
+		return <AjaxResponse> {
 			status: xhr.status,
 			error: error,
 			xhr: xhr,
