@@ -193,6 +193,13 @@ export interface AjaxResponse {
 		@type {XMLHttpRequest}
 	*/
 	xhr: XMLHttpRequest;
+
+
+	/**
+		@attribute options
+		@type {AjaxOptions}
+	*/
+	options: AjaxOptions;
 }
 
 
@@ -220,7 +227,7 @@ export class Ajax
 		@param xhr {XMLHttpRequest}
 		@param options {AjaxOptions}
 	*/
-	public onsuccess(xhr, options: AjaxOptions)
+	public onsuccess(xhr: XMLHttpRequest, options: AjaxOptions)
 	{
 		xhr.onreadystatechange = null
 
@@ -235,14 +242,29 @@ export class Ajax
 					if (xhr.responseXML)
 						data = xhr.responseXML
 					else {
-						var parser = new DOMParser()
-						data = parser.parseFromString(xhr.responseText, 'application/xml')
+						switch (xhr.getResponseHeader('Content-Type')) {
+							case 'text/html':
+							case 'application/xhtml+xml':
+								data = this.parseHTML(xhr)
+								break
+
+							case 'application/xml':
+							case 'text/xml':
+								data = this.parseXML(xhr)
+								break
+
+							case 'image/svg+xml':
+								data = this.parseSVG(xhr)
+
+							default:
+								throw new TypeError('Unsuported Content-Type for responseType="document"')
+						}
 					}
-					break;
+					break
 
 				case 'json':
 					data = JSON.parse(xhr.responseText)
-					break;
+					break
 
 				default:
 					throw new TypeError('Unsuported data type')
@@ -253,6 +275,7 @@ export class Ajax
 			status: xhr.status,
 			data: data,
 			xhr: xhr,
+			options: options
 		}
 	}
 
@@ -262,10 +285,16 @@ export class Ajax
 		@method onerror
 		@param XMLHttpRequest xhr
 		@param options {AjaxOptions}
+		@param error {String|Any} Status text or thrown error
 	*/
-	public onerror(xhr,options)
+	public onerror(xhr:XMLHttpRequest, options: AjaxOptions, error)
 	{
-		return xhr
+		return {
+			status: xhr.status,
+			error: error,
+			xhr: xhr,
+			options: options
+		}
 	}
 
 
@@ -357,10 +386,18 @@ export class Ajax
 			delete this.requests[promise._uid]
 
 			if (defer.promise.isPending()) {
-				if (xhr.status>=200 && xhr.status<=300)
-					defer.resolve( this.onsuccess(xhr,options))
+				if (xhr.status>=200 && xhr.status<=300) {
+					var resp
+					try {
+						resp = this.onsuccess(xhr,options)
+					} catch (e) {
+						defer.reject( this.onerror(xhr, options, e))
+						return
+					}
+					defer.resolve(resp)
+				}
 				else
-					defer.reject( this.onerror(xhr,options))
+					defer.reject( this.onerror(xhr, options, xhr.statusText))
 			}
 		}
 
@@ -494,6 +531,32 @@ export class Ajax
 		return params.join('&')
 	}
 
+
+	private parseHTML(xhr: XMLHttpRequest)
+	{
+		var parser = new DOMParser()
+		var doc = parser.parseFromString(xhr.responseText, 'text/html')
+		if (doc===null) {
+			doc = document.implementation.createHTMLDocument("")
+			doc.documentElement['innerHTML'] = xhr.responseText
+		}
+
+		return doc
+	}
+
+
+	private parseXML(xhr: XMLHttpRequest)
+	{
+		var parser = new DOMParser()
+		return parser.parseFromString(xhr.responseText, 'application/xml')
+	}
+
+
+	private parseSVG(xhr: XMLHttpRequest)
+	{
+		var parser = new DOMParser()
+		return parser.parseFromString(xhr.responseText, 'image/svg+xml')
+	}
 }
 
 
