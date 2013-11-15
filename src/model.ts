@@ -79,7 +79,8 @@ class Model extends Events {
 		@private
 	*/
 	private _changed: {[key: string]: boolean} = {};
-	private _changeEventScheduled;
+	private _isChanged: boolean;
+	private _emitChangeTimer;
 
 
 	/**
@@ -277,9 +278,6 @@ class Model extends Events {
 	*/
 	public emitChange()
 	{
-		if (!this.isChanged())
-			return;
-
 		if (this._changed[this.constructor.idAttribute]) {
 			var old = this.id
 			this.id = this.get('id')
@@ -287,8 +285,10 @@ class Model extends Events {
 				this.emit('change:id', old, this.id, this)
 		}
 
-		clearTimeout(this._changeEventScheduled)
-		this._changeEventScheduled = false
+		if (this._emitChangeTimer)
+			clearTimeout(this._emitChangeTimer)
+
+		this._emitChangeTimer = false
 		this.beforeEmitChange(this._changed)
 		this.emit('change', this)
 		this._changed = {}
@@ -297,11 +297,13 @@ class Model extends Events {
 
 	public scheduleEmitChange()
 	{
-		if (this._changeEventScheduled)
+		if (this._emitChangeTimer)
 			return
 
-		this._changeEventScheduled = setTimeout(()=> {
-			this._changeEventScheduled = false
+		this._isChanged = true
+		this._emitChangeTimer = setTimeout(()=> {
+			this._isChanged = false
+			this._emitChangeTimer = null
 			this.emitChange()
 		},0)
 
@@ -316,14 +318,14 @@ class Model extends Events {
 	*/
 	public isChanged(key?: string) : boolean
 	{
-		return key ? this._changed[key] : (this._changeEventScheduled ? true : false)
+		return key ? this._changed[key] : this._isChanged
 	}
 
 
 
 	/**
 		It's called after some model attributes changed but before change event itself.
-		Can be used to manipulate {changed} hash, evalute computed properties and cache results or whatever you wont.
+		Can be used to manipulate {changed} hash, evalute computed properties and cache results or whatever you want.
 		By default do nothing.
 
 		@method beforeEmitChange
