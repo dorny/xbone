@@ -96,20 +96,34 @@ class Promise
 
 
 	/**
-		Ensures that onFulfilledOrRejected will be called regardless of whether
-		this promise is fulfilled or rejected.  onFulfilledOrRejected WILL NOT
-		receive the promises' value or reason.  Any returned value will be disregarded.
-		onFulfilledOrRejected may throw or return a rejected promise to signal
-		an additional error.
+		Shortcut for .then(onFulfilledOrRejected, onFulfilledOrRejected)
 
-		@method finally
+		@method always
 		@param onFulfilledOrRejected {function} handler to be called regardless of
 		  fulfillment or rejection
 		@returns {Promise}
 	*/
-	public finally(onFulfilledOrRejected)
+	public always(onFulfilledOrRejected)
 	{
-		var injectHandler = ()=> Promise.resolve(onFulfilledOrRejected()).yield(this)
+		return this.then(onFulfilledOrRejected,onFulfilledOrRejected)
+	}
+
+
+
+	/**
+		Ensures that onFulfilledOrRejected will be called regardless of whether
+		this promise is fulfilled or rejected. Any returned value will be disregarded.
+		onFulfilledOrRejected may throw or return a rejected promise to signal
+		an additional error.
+
+		@method ensure
+		@param onFulfilledOrRejected {function} handler to be called regardless of
+		  fulfillment or rejection
+		@returns {Promise}
+	*/
+	public ensure(onFulfilledOrRejected)
+	{
+		var injectHandler = (value)=> Promise.resolve(onFulfilledOrRejected(value)).yield(this)
 		return this.then(injectHandler,injectHandler)
 	}
 
@@ -225,7 +239,7 @@ class Promise
 		@method resolve
 		@private
 	*/
-	private resolve(promiseOrValue)
+	private resolve(promiseOrValue?)
 	{
 		if (this.state !== PromiseState.PENDING) {
 			if (Promise.onerror)
@@ -346,7 +360,7 @@ class Promise
 		@method reject
 		@private
 	*/
-	private reject(reason)
+	private reject(reason?)
 	{
 		if (this.state !== PromiseState.PENDING) {
 			if (Promise.onerror)
@@ -454,8 +468,8 @@ class Promise
 		var promise = new Promise()
 		return {
 			promise: promise,
-			resolve: (x)=> promise.resolve(x),
-			reject: (x)=> promise.reject(x),
+			resolve: (x?)=> promise.resolve(x),
+			reject: (x?)=> promise.reject(x),
 		}
 	}
 
