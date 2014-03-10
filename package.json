@@ -2,7 +2,7 @@
   "name": "xbone",
   "description": "XBone - NextGEN WEB application framework & toolkit",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
 
   "author": {
     "name": "Michal Dorner",
@@ -21,7 +21,8 @@
     "grunt-contrib-yuidoc": "0.5.x",
     "grunt-browserify":"*",
     "grunt-shell": "0.3.1",
-    "grunt-ts": "1.4.x",
+    "typescript": "0.9.7",
+    "grunt-ts": "1.7.3",
     "benchmark": "~1",
 
     "promises-aplus-tests": "*",

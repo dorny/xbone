@@ -237,9 +237,9 @@ class Collection<T extends Model> extends Events
 	public setModelsFromJSON(data: Object[], ModelClass: {new (attrs): T; idAttribute: string}, options: {create?; update?; remove?} = {})
 	{
 		var idAttribute = ModelClass.idAttribute
-		  , create = options.create || (attrs)=> new ModelClass(attrs)
-		  , update = options.update || (model,attrs)=> model.setAttrs(attrs)
-		  , remove = options.remove || (model)=> model.free()
+		  , create = options.create || ((attrs)=> new ModelClass(attrs))
+		  , update = options.update || ((model,attrs)=> model.setAttrs(attrs))
+		  , remove = options.remove || ((model)=> model.free())
 
 		var newHash = _.indexBy(data, (it)=> it[idAttribute])
 		  , oldHash = this._models

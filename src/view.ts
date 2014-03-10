@@ -108,7 +108,7 @@ class View extends Events
 		  , route = this.routes[first]
 
 		if (!route)
-			throw new Error('Route not found')
+			throw new Error('Route "'+first+'" not found')
 
 		route.apply(this, rest)
 	}

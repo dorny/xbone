@@ -122,7 +122,7 @@ export class $HTMLElement
 	*/
 	public createMap(selector: string, attrName: string) : {[key: string]: HTMLElement}
 	{
-		var map = {}
+		var map: {[key: string]: HTMLElement} = {}
 		var els = this.all(selector)
 		for(var i=0; i<els.length; i++)
 			map[ els[i].getAttribute(attrName)] = els[i]
@@ -247,7 +247,7 @@ export class $HTMLElement
 				if (sel.multiple && sel['selectedOptions'])
 					return slice.call(sel['selectedOptions']).map((el)=> el.value)
 				else
-					return sel.options[sel.selectedIndex].value
+					return sel.value
 
 			case 'TEXTAREA':
 				return (<HTMLTextAreaElement> this.el).value
@@ -303,6 +303,21 @@ export class $HTMLElement
 				this.el.textContent = value
 				return
 		}
+	}
+
+	public setOptions(options: any[], keyValue: string, keyText: string)
+	{
+		if (this.el.tagName != 'SELECT')
+			throw new TypeError('Invalid element type')
+
+		var el = <HTMLSelectElement> this.el
+
+		var l = el.options.length
+		if (l>0)
+			while(l--) el.remove(0)
+
+		var $doc = new $Document(el.ownerDocument)
+		options.forEach((opt)=> el.add( $doc.create('option',{value: opt[keyValue], text: opt[keyText]}) ))
 	}
 
 
@@ -585,9 +600,9 @@ export class $Document
 	public createMap: (selector: string, attrName: string) => {[key: string]: HTMLElement};
 	public $one: (selector: string) => $HTMLElement;
 	public $all: (selector: string) => $HTMLElement[];
-	public on: (events: string, selector: string, callback, useCapture: boolean = false) => $Document;
-	public once: (events: string, selector: string, callback, useCapture: boolean = false) => $Document;
-	public bind: (events, callback, useCapture: boolean = false) => $Document;
+	public on: (events: string, selector: string, callback, useCapture: boolean) => $Document;
+	public once: (events: string, selector: string, callback, useCapture: boolean) => $Document;
+	public bind: (events, callback, useCapture: boolean) => $Document;
 	public off: (events, callback?, useCapture?) => $Document;
 }
 

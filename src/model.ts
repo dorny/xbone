@@ -51,9 +51,6 @@ class Model extends Events {
 	public id: string;
 
 
-	// for access to static properties in child class
-	public constructor;
-
 	/**
 		@attribute idAttribute
 		@static
@@ -90,9 +87,14 @@ class Model extends Events {
 	constructor(attributes = {})
 	{
 		super()
-		var defaults = this.constructor.defaults
+		var Self = <typeof Model>this.constructor
+		var defaults = Self.defaults
+
 		this.attrs = defaults ? _.merge(attributes, defaults) : attributes
-		this.id = this.get(this.constructor.idAttribute) || _.uniqueId('cid')
+		if (Self.idAttribute)
+			this.id = this.get(Self.idAttribute) || _.uniqueId('cid')
+		else
+			this.id = _.uniqueId('cid')
 	}
 
 
@@ -193,7 +195,8 @@ class Model extends Events {
 	public setModel(model: Model)
 	{
 		this.setAttrs(model.attrs)
-		if (!this._changed[this.constructor.idAttribute] && this.id != model.id) {
+		var Self = <typeof Model>this.constructor
+		if (!this._changed[Self.idAttribute] && this.id != model.id) {
 			var old = this.id
 			this.id = model.id
 			this.emit('change:id', old, this.id, this)
@@ -278,7 +281,8 @@ class Model extends Events {
 	*/
 	public emitChange()
 	{
-		if (this._changed[this.constructor.idAttribute]) {
+		var Self = (<typeof Model>this.constructor)
+		if (this._changed[Self.idAttribute]) {
 			var old = this.id
 			this.id = this.get('id')
 			if (old != this.id)
